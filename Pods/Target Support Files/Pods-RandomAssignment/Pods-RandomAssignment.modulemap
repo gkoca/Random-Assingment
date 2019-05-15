@@ -1,0 +1,6 @@
+framework module Pods_RandomAssignment {
+  umbrella header "Pods-RandomAssignment-umbrella.h"
+
+  export *
+  module * { export * }
+}

@@ -1,0 +1,29 @@
+PODS:
+  - Eureka (4.3.0)
+  - SwipeCellKit (2.6.0)
+
+DEPENDENCIES:
+  - Eureka
+  - SwipeCellKit (from `https://github.com/SwipeCellKit/SwipeCellKit.git`, branch `develop`)
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - Eureka
+
+EXTERNAL SOURCES:
+  SwipeCellKit:
+    :branch: develop
+    :git: https://github.com/SwipeCellKit/SwipeCellKit.git
+
+CHECKOUT OPTIONS:
+  SwipeCellKit:
+    :commit: daad4f4ad57becebeffa648f9a37bbc53e1bd396
+    :git: https://github.com/SwipeCellKit/SwipeCellKit.git
+
+SPEC CHECKSUMS:
+  Eureka: 6d711cb30ca333b4bc893110285a722ae3840114
+  SwipeCellKit: 935ca28c187ec6e1ffb2b578cf8ddca842bfdcbb
+
+PODFILE CHECKSUM: 295dbdb2a1e345c01f45108037a3b60c0c65ada3
+
+COCOAPODS: 1.6.2
