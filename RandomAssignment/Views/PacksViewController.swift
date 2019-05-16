@@ -9,7 +9,7 @@
 import UIKit
 import SwipeCellKit
 
-class PacksViewController: UITableViewController {
+final class PacksViewController: UITableViewController {
 	
 	
 	@IBOutlet var viewModel: PacksViewModel!
@@ -18,15 +18,24 @@ class PacksViewController: UITableViewController {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
+		NotificationCenter.default.addObserver(self, selector: #selector(viewModelDidUpdated), name: PacksViewModel.didUpdated, object: viewModel)
 		viewModel.load()
-		tableView.reloadData()
+		
 	}
 	
+	@objc func viewModelDidUpdated(_ notification: Notification) {
+		print("viewModelDidUpdated")
+		UIView.transition(with: tableView,
+						  duration: 0.35,
+						  options: .transitionCrossDissolve,
+						  animations: { self.tableView.reloadData() })
+	}
+
 }
 
 extension PacksViewController {
 	override func numberOfSections(in tableView: UITableView) -> Int {
-		return isFiltered ? 1 : viewModel.numberOfSections
+		return viewModel.numberOfSections
 	}
 	
 	override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -37,7 +46,11 @@ extension PacksViewController {
 		guard let cell = tableView.dequeueReusableCell(withIdentifier: "packageCell") as? PackageCell else {
 			fatalError("PackageCell is nil")
 		}
-		cell.pack = viewModel.pack(for: indexPath, isFiltered: isFiltered)
+		let pack = viewModel.pack(for: indexPath, isFiltered: isFiltered)
+		cell.pack = pack
+		if viewModel.titleForHeader(in: indexPath.section) == "FAVORITES" {
+			cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.rawValue.uppercased()))"
+		}
 		cell.delegate = self
 		return cell
 	}
@@ -49,26 +62,23 @@ extension PacksViewController {
 }
 
 extension PacksViewController: SwipeTableViewCellDelegate {
+	
 	func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
 		guard orientation == .right else { return nil }
-		
-		if viewModel.titleForHeader(in: indexPath.section) == "FAVORITE" {
-			let notFavoriteAction = SwipeAction(style: .destructive, title: "Remove Favorite") {[weak self] action, indexPath in
-				// handle action by updating model with deletion
+		if viewModel.titleForHeader(in: indexPath.section) == "FAVORITES" {
+			let notFavoriteAction = SwipeAction(style: .destructive, title: "Remove Favorite") {[weak self] action, path in
 				guard let `self` = self else { return }
-				self.viewModel.removeFromFavorite(in: indexPath)
-//				self.tableView.reloadData()
-				
+				self.viewModel.removeFromFavorite(in: path)
+				print(#function)
 			}
 			notFavoriteAction.image = UIImage(named: "notFavorite")
 			notFavoriteAction.backgroundColor = UIColor.red
 			return [notFavoriteAction]
 		} else {
-			let favoriteAction = SwipeAction(style: .destructive, title: "Favorite") {[weak self] action, indexPath in
-				// handle action by updating model with deletion
+			let favoriteAction = SwipeAction(style: .destructive, title: "Favorite") {[weak self] action, path in
 				guard let `self` = self else { return }
-				self.viewModel.addToFavorite(in: indexPath)
-//				self.tableView.reloadData()
+				self.viewModel.addToFavorite(in: path)
+				print(#function)
 			}
 			favoriteAction.image = UIImage(named: "favorite")
 			favoriteAction.backgroundColor = tableView.tintColor

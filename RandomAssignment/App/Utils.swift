@@ -29,3 +29,21 @@ extension Array {
 		return self[index]
 	}
 }
+
+class Dispatch {
+	static func mainAsync(_ block : @escaping ()->()) {
+		DispatchQueue.main.async(execute: block)
+	}
+	
+	static func mainAsync(after seconds: TimeInterval, block : @escaping ()->()) {
+		DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: block)
+	}
+	
+	static func background(_ block : @escaping ()->()) {
+		DispatchQueue.global(qos: DispatchQoS.QoSClass.default).async(execute: block)
+	}
+	
+	static func background(after seconds: TimeInterval, block : @escaping ()->()) {
+		DispatchQueue.global(qos: DispatchQoS.QoSClass.default).asyncAfter(deadline: .now() + seconds, execute: block)
+	}
+}
