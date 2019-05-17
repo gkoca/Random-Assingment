@@ -16,28 +16,7 @@ final class PacksViewModel: NSObject {
 	
 	weak var delegate: PacksViewModelDelegate?
 	
-	private var packs = [Pack]() {
-		didSet {
-			let favorites = UserDefaults.standard.object(forKey: FAVORITE_KEY) as? [String]
-			for item in packs {
-				var pack = item
-				if favorites?.contains(pack.name) ?? false {
-					pack.isFavorite = true
-					favoritePacks.append(pack)
-				} else {
-					switch pack.subscriptionType {
-					case .monthly:
-						monthlyPacks.append(pack)
-					case .weekly:
-						weeklyPacks.append(pack)
-					case .yearly:
-						yearlyPacks.append(pack)
-					}
-				}
-			}
-			sortAllPacks()
-		}
-	}
+	private var packs = [Pack]()
 	private var sectionHeaders = [String]()
 	private var favoritePacks = [Pack]()
 	private var yearlyPacks = [Pack]()
@@ -56,6 +35,24 @@ extension PacksViewModel {
 			guard let `self` = self else { return }
 			if let fetchedPacks = result {
 				self.packs = fetchedPacks.packs
+				let favorites = UserDefaults.standard.object(forKey: FAVORITE_KEY) as? [String]
+				for item in self.packs {
+					var pack = item
+					if favorites?.contains(pack.name) ?? false {
+						pack.isFavorite = true
+						self.favoritePacks.append(pack)
+					} else {
+						switch pack.subscriptionType {
+						case .monthly:
+							self.monthlyPacks.append(pack)
+						case .weekly:
+							self.weeklyPacks.append(pack)
+						case .yearly:
+							self.yearlyPacks.append(pack)
+						}
+					}
+				}
+				self.sortAllPacks()
 			}
 		}
 	}
@@ -107,9 +104,8 @@ extension PacksViewModel {
 	func addToFavorite(in indexPath: IndexPath, isFiltered: Bool = false) {
 		var pack = self.pack(for: indexPath, isFiltered: isFiltered)
 		pack.isFavorite = true
-		
 		if isFiltered {
-			filteredPacks[indexPath.row].isFavorite = false
+			filteredPacks[indexPath.row].isFavorite = true
 		}
 		switch pack.subscriptionType {
 		case .monthly:

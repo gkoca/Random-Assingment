@@ -59,7 +59,6 @@ extension PacksViewController: PacksViewModelDelegate {
 extension PacksViewController {
 	
 	override func numberOfSections(in tableView: UITableView) -> Int {
-		
 		return isFiltering() ? 1 : viewModel.numberOfSections
 	}
 	
@@ -73,24 +72,24 @@ extension PacksViewController {
 		}
 		let pack = viewModel.pack(for: indexPath, isFiltered: isFiltering())
 		cell.pack = pack
-		if pack.isFavorite {
-			cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized()))"
-		} else if isFiltering() && searchController.searchBar.selectedScopeButtonIndex == 0 {
-			if pack.isFavorite {
-				cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized())) (Favori)"
+		switch (isFiltering(), pack.isFavorite) {
+		case (true, true):
+			if searchController.searchBar.selectedScopeButtonIndex == 0 {
+				cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized())) ⭐️"
 			} else {
+				cell.nameLabel.text = "\(pack.name) ⭐️"
+			}
+		case (true, false):
+			if searchController.searchBar.selectedScopeButtonIndex == 0 {
 				cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized()))"
-			}
-		} else if isFiltering() && searchController.searchBar.selectedScopeButtonIndex != 0 {
-			if pack.isFavorite {
-				cell.nameLabel.text = "\(pack.name) (Favori)"
 			} else {
-				cell.nameLabel.text = "\(pack.name)"
+				cell.nameLabel.text = pack.name
 			}
-		} else {
+		case (false, true):
+			cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized()))"
+		case (false, false):
 			cell.nameLabel.text = pack.name
 		}
-		
 		cell.delegate = self
 		return cell
 	}
