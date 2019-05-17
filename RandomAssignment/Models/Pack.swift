@@ -16,6 +16,7 @@ struct Pack: Codable {
 	let price: Double
 	let tariff: Tariff
 	var availableUntil: String
+	var isFavorite: Bool = false
 	var availableUntilDate: Date? {
 		get {
 			guard let timeInterval = TimeInterval(availableUntil) else { return nil }

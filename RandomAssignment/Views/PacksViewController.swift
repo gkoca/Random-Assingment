@@ -73,11 +73,24 @@ extension PacksViewController {
 		}
 		let pack = viewModel.pack(for: indexPath, isFiltered: isFiltering())
 		cell.pack = pack
-		if viewModel.titleForHeader(in: indexPath.section) == "Favoriler" || (isFiltering() && searchController.searchBar.selectedScopeButtonIndex == 0) {
+		if pack.isFavorite {
 			cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized()))"
+		} else if isFiltering() && searchController.searchBar.selectedScopeButtonIndex == 0 {
+			if pack.isFavorite {
+				cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized())) (Favori)"
+			} else {
+				cell.nameLabel.text = "\(pack.name) (\(pack.subscriptionType.localized()))"
+			}
+		} else if isFiltering() && searchController.searchBar.selectedScopeButtonIndex != 0 {
+			if pack.isFavorite {
+				cell.nameLabel.text = "\(pack.name) (Favori)"
+			} else {
+				cell.nameLabel.text = "\(pack.name)"
+			}
 		} else {
 			cell.nameLabel.text = pack.name
 		}
+		
 		cell.delegate = self
 		return cell
 	}
@@ -91,11 +104,11 @@ extension PacksViewController {
 extension PacksViewController: SwipeTableViewCellDelegate {
 	
 	func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
-		guard orientation == .right, !isFiltering() else { return nil }
-		if viewModel.titleForHeader(in: indexPath.section) == "Favoriler" {
+		guard orientation == .right else { return nil }
+		if viewModel.pack(for: indexPath, isFiltered: isFiltering()).isFavorite {
 			let notFavoriteAction = SwipeAction(style: .destructive, title: "Favorilerden çıkar") {[weak self] action, path in
 				guard let `self` = self else { return }
-				self.viewModel.removeFromFavorite(in: path)
+				self.viewModel.removeFromFavorite(in: path, isFiltered: self.isFiltering())
 			}
 			notFavoriteAction.image = UIImage(named: "notFavorite")
 			notFavoriteAction.backgroundColor = UIColor.red
@@ -103,7 +116,7 @@ extension PacksViewController: SwipeTableViewCellDelegate {
 		} else {
 			let favoriteAction = SwipeAction(style: .destructive, title: "Favorilere ekle") {[weak self] action, path in
 				guard let `self` = self else { return }
-				self.viewModel.addToFavorite(in: path)
+				self.viewModel.addToFavorite(in: path, isFiltered: self.isFiltering())
 			}
 			favoriteAction.image = UIImage(named: "favorite")
 			favoriteAction.backgroundColor = tableView.tintColor
@@ -113,7 +126,11 @@ extension PacksViewController: SwipeTableViewCellDelegate {
 	
 	func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
 		var options = SwipeOptions()
-		options.expansionStyle = .destructive
+		if isFiltering() {
+			options.expansionStyle = .selection
+		} else {
+			options.expansionStyle = .destructive
+		}
 		options.transitionStyle = .border
 		return options
 	}

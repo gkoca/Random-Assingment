@@ -19,8 +19,10 @@ final class PacksViewModel: NSObject {
 	private var packs = [Pack]() {
 		didSet {
 			let favorites = UserDefaults.standard.object(forKey: FAVORITE_KEY) as? [String]
-			for pack in packs {
+			for item in packs {
+				var pack = item
 				if favorites?.contains(pack.name) ?? false {
+					pack.isFavorite = true
 					favoritePacks.append(pack)
 				} else {
 					switch pack.subscriptionType {
@@ -102,52 +104,83 @@ extension PacksViewModel {
 		}
 	}
 	
-	func addToFavorite(in indexPath: IndexPath) {
-		let pack = self.pack(for: indexPath, isFiltered: false)
-		if let section = sectionHeaders[safeIndex: indexPath.section] {
-			switch section {
-			case "Yıllık":
-				yearlyPacks.remove(at: indexPath.row)
-			case "Aylık":
+	func addToFavorite(in indexPath: IndexPath, isFiltered: Bool = false) {
+		var pack = self.pack(for: indexPath, isFiltered: isFiltered)
+		pack.isFavorite = true
+		
+		if isFiltered {
+			filteredPacks[indexPath.row].isFavorite = false
+		}
+		switch pack.subscriptionType {
+		case .monthly:
+			if isFiltered {
+				if let targetIndex = monthlyPacks.firstIndex(where: { $0.name == pack.name }) {
+					monthlyPacks.remove(at: targetIndex)
+				}
+			} else {
 				monthlyPacks.remove(at: indexPath.row)
-			case "Haftalık":
+			}
+		case .weekly:
+			if isFiltered {
+				if let targetIndex = weeklyPacks.firstIndex(where: { $0.name == pack.name }) {
+					weeklyPacks.remove(at: targetIndex)
+				}
+			} else {
 				weeklyPacks.remove(at: indexPath.row)
-			default:
-				fatalError("unknown section")
 			}
-			Dispatch.mainAsync(after: 0.5) { [weak self] in
-				guard let `self` = self else { return }
-				self.favoritePacks.append(pack)
-				self.favoritePacks = self.sortedPacks(packs: self.favoritePacks)
-				self.configureSections()
-				let favorites = self.favoritePacks.map{ $0.name }
-				UserDefaults.standard.set(favorites, forKey: FAVORITE_KEY)
-				UserDefaults.standard.synchronize()
+		case .yearly:
+			if isFiltered {
+				if let targetIndex = yearlyPacks.firstIndex(where: { $0.name == pack.name }) {
+					yearlyPacks.remove(at: targetIndex)
+				}
+			} else {
+				yearlyPacks.remove(at: indexPath.row)
 			}
+		}
+		
+		Dispatch.mainAsync(after: 0.5) { [weak self] in
+			guard let `self` = self else { return }
+			self.favoritePacks.append(pack)
+			self.favoritePacks = self.sortedPacks(packs: self.favoritePacks)
+			self.updateFavorites()
+			self.configureSections()
 		}
 	}
 	
-	func removeFromFavorite(in indexPath: IndexPath) {
-		let pack = self.pack(for: indexPath, isFiltered: false)
-		favoritePacks.remove(at: indexPath.row)
-		let favorites = favoritePacks.map{ $0.name }
-		UserDefaults.standard.set(favorites, forKey: FAVORITE_KEY)
-		UserDefaults.standard.synchronize()
-		Dispatch.mainAsync(after: 0.5) { [weak self] in
-			guard let `self` = self else { return }
-			switch pack.subscriptionType {
-			case .monthly:
-				self.monthlyPacks.append(pack)
-				self.monthlyPacks = self.sortedPacks(packs: self.monthlyPacks)
-			case .weekly:
-				self.weeklyPacks.append(pack)
-				self.weeklyPacks = self.sortedPacks(packs: self.weeklyPacks)
-			case .yearly:
-				self.yearlyPacks.append(pack)
-				self.yearlyPacks = self.sortedPacks(packs: self.yearlyPacks)
+	func removeFromFavorite(in indexPath: IndexPath, isFiltered: Bool = false) {
+		var pack = self.pack(for: indexPath, isFiltered: isFiltered)
+		pack.isFavorite = false
+		func processPacks() {
+			updateFavorites()
+			Dispatch.mainAsync(after: 0.5) { [weak self] in
+				guard let `self` = self else { return }
+				switch pack.subscriptionType {
+				case .monthly:
+					self.monthlyPacks.append(pack)
+					self.monthlyPacks = self.sortedPacks(packs: self.monthlyPacks)
+				case .weekly:
+					self.weeklyPacks.append(pack)
+					self.weeklyPacks = self.sortedPacks(packs: self.weeklyPacks)
+				case .yearly:
+					self.yearlyPacks.append(pack)
+					self.yearlyPacks = self.sortedPacks(packs: self.yearlyPacks)
+				}
+				self.configureSections()
 			}
-			self.configureSections()
 		}
+		if isFiltered {
+			filteredPacks[indexPath.row].isFavorite = false
+			if let targetIndex = favoritePacks.firstIndex(where: { $0.name == pack.name }) {
+				favoritePacks.remove(at: targetIndex)
+				processPacks()
+			} else {
+				print("ERROR: target index is nil")
+			}
+		} else {
+			favoritePacks.remove(at: indexPath.row)
+			processPacks()
+		}
+		
 	}
 	
 	func sortAllPacks(by option: PackSortOption = .talk) {
@@ -178,6 +211,21 @@ extension PacksViewModel {
 
 //MARK: - Private
 fileprivate extension PacksViewModel {
+	
+	func updateFavorites() {
+		let favorites = favoritePacks.map{ $0.name }
+		for i in 0..<packs.count - 1 {
+			packs[i].isFavorite = false
+		}
+		favorites.forEach {[weak self] favorite in
+			guard let `self` = self else { return }
+			if let targetIndex = self.packs.firstIndex(where: { $0.name == favorite }) {
+				packs[targetIndex].isFavorite = true
+			}
+		}
+		UserDefaults.standard.set(favorites, forKey: FAVORITE_KEY)
+		UserDefaults.standard.synchronize()
+	}
 	
 	func sortedPacks(packs: [Pack], by option: PackSortOption = .talk) ->[Pack] {
 		let sortedPacks = packs.sorted { (lhs, rhs) -> Bool in
