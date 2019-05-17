@@ -31,6 +31,17 @@ enum SubscriptionType: String, Codable, Comparable {
 		}
 	}
 	
+	func localized() -> String {
+		switch self {
+		case .monthly:
+			return "Aylık"
+		case .weekly:
+			return "Haftalık"
+		case .yearly:
+			return "Yıllık"
+		}
+	}
+	
 	static func < (lhs: SubscriptionType, rhs: SubscriptionType) -> Bool {
 		return lhs.value() < rhs.value()
 	}

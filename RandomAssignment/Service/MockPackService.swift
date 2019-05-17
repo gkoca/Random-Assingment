@@ -8,7 +8,8 @@
 
 import Foundation
 
-class MockPackService: PackServiceProtocol {
+final class MockPackService: PackServiceProtocol {
+	
 	func fetch(complete: @escaping (Packs?) -> Void) {
 		if let jsonUrl = Bundle.main.url(forResource: "packageList", withExtension: "json") {
 			do {

@@ -9,29 +9,33 @@
 import UIKit
 import SwipeCellKit
 
-class PackageCell: SwipeTableViewCell {
+final class PackageCell: SwipeTableViewCell {
 
 	var pack: Pack? {
 		didSet {
 			if let pack = pack {
 				nameLabel.text = pack.name
 				descriptionLabel.text = pack.desc
-				talkValueLabel.text = pack.tariff.talk
-				dataValueLabel.text = pack.tariff.data
-				smsValueLabel.text = pack.tariff.sms
+				talkValueLabel.text = "\(pack.tariff.talk) dakika konuşma"
+				talkValueLabel.isHidden = pack.tariff.talkVal == 0
+				dataValueLabel.text = "\(pack.tariff.dataVal / 1024) gb internet"
+				dataValueLabel.isHidden = pack.tariff.dataVal == 0
+				smsValueLabel.text = "\(pack.tariff.sms) adet sms"
+				smsValueLabel.isHidden = pack.tariff.smsVal == 0
+				
 				if let benefits = pack.benefits {
 					let fits = benefits.map { $0.rawValue }.joined(separator: ", ")
-					benefitsLabel.text = fits
+					benefitsLabel.text = "Ek faydalar: \(fits)"
 				} else {
 					benefitsLabel.text = ""
 				}
-				priceLabel.text = String(pack.price)
-				usedBeforLabel.text = pack.didUseBefore ? "You used this package before" : ""
+				priceLabel.text = "\(pack.price) ₺"
+				usedBeforLabel.text = pack.didUseBefore ? "Bu paketi daha önce kullandınız" : ""
 				if let availabilityDate = pack.availableUntilDate {
 					let formatter = DateFormatter()
 					formatter.dateFormat = "dd-MM-yyyy"
 					let formattedDate = formatter.string(from: availabilityDate)
-					availabilityDateLabel.text = "Available until \(formattedDate)"
+					availabilityDateLabel.text = "\(formattedDate) tarihine kadar geçerli"
 				}
 			}
 		}

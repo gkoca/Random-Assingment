@@ -8,9 +8,14 @@
 
 import Foundation
 
-class PacksViewModel: NSObject {
+protocol PacksViewModelDelegate: class {
+	func viewModelDidUpdate(viewModel: PacksViewModel)
+}
+
+final class PacksViewModel: NSObject {
 	
-	static let didUpdated = Notification.Name(rawValue: "PacksViewModelDidUpdated")
+	weak var delegate: PacksViewModelDelegate?
+	
 	private var packs = [Pack]() {
 		didSet {
 			let favorites = UserDefaults.standard.object(forKey: FAVORITE_KEY) as? [String]
@@ -29,21 +34,20 @@ class PacksViewModel: NSObject {
 				}
 			}
 			sortAllPacks()
-			configureSections()
 		}
 	}
-	
-	
+	private var sectionHeaders = [String]()
 	private var favoritePacks = [Pack]()
 	private var yearlyPacks = [Pack]()
 	private var monthlyPacks = [Pack]()
 	private var weeklyPacks = [Pack]()
-	
-	
-	private var sectionHeaders = [String]()
-	
 	private var filteredPacks = [Pack]()
+	
 	public private(set) var numberOfSections = 0
+}
+
+//MARK: - Public
+extension PacksViewModel {
 	
 	func load() {
 		MockPackService().fetch { [weak self] (result) in
@@ -56,7 +60,7 @@ class PacksViewModel: NSObject {
 	
 	func titleForHeader(in section: Int) -> String {
 		guard let title = sectionHeaders[safeIndex: section] else { return "" }
-		return title.uppercased()
+		return title
 	}
 	
 	func numberOfRows(in section: Int, isFiltered: Bool) -> Int {
@@ -67,7 +71,6 @@ class PacksViewModel: NSObject {
 				let sectionHeader = sectionHeaders[safeIndex: section]
 				else { return 0 }
 			let count = packs(for: sectionHeader).count
-			print("count for section \(section) is \(count)")
 			return count
 		}
 	}
@@ -86,37 +89,28 @@ class PacksViewModel: NSObject {
 	
 	func packs(for section: String) -> [Pack] {
 		switch section {
-		case "favorites":
+		case "Favoriler":
 			return favoritePacks
-		case "yearly":
+		case "Yıllık":
 			return yearlyPacks
-		case "monthly":
+		case "Aylık":
 			return monthlyPacks
-		case "weekly":
+		case "Haftalık":
 			return weeklyPacks
 		default:
 			fatalError("unknown section")
 		}
-	}
-	func configureSections() {
-		sectionHeaders.removeAll()
-		if favoritePacks.count > 0 { sectionHeaders.append("favorites") }
-		if yearlyPacks.count > 0 { sectionHeaders.append("yearly") }
-		if monthlyPacks.count > 0 { sectionHeaders.append("monthly") }
-		if weeklyPacks.count > 0 { sectionHeaders.append("weekly") }
-		numberOfSections = sectionHeaders.count
-		NotificationCenter.default.post(name: PacksViewModel.didUpdated, object: self, userInfo: nil)
 	}
 	
 	func addToFavorite(in indexPath: IndexPath) {
 		let pack = self.pack(for: indexPath, isFiltered: false)
 		if let section = sectionHeaders[safeIndex: indexPath.section] {
 			switch section {
-			case "yearly":
+			case "Yıllık":
 				yearlyPacks.remove(at: indexPath.row)
-			case "monthly":
+			case "Aylık":
 				monthlyPacks.remove(at: indexPath.row)
-			case "weekly":
+			case "Haftalık":
 				weeklyPacks.remove(at: indexPath.row)
 			default:
 				fatalError("unknown section")
@@ -139,7 +133,6 @@ class PacksViewModel: NSObject {
 		let favorites = favoritePacks.map{ $0.name }
 		UserDefaults.standard.set(favorites, forKey: FAVORITE_KEY)
 		UserDefaults.standard.synchronize()
-		
 		Dispatch.mainAsync(after: 0.5) { [weak self] in
 			guard let `self` = self else { return }
 			switch pack.subscriptionType {
@@ -157,7 +150,36 @@ class PacksViewModel: NSObject {
 		}
 	}
 	
-	private func sortedPacks(packs: [Pack], by option: PackSortOption = .talk) ->[Pack] {
+	func sortAllPacks(by option: PackSortOption = .talk) {
+		favoritePacks = sortedPacks(packs: favoritePacks, by: option)
+		yearlyPacks = sortedPacks(packs: yearlyPacks, by: option)
+		monthlyPacks = sortedPacks(packs: monthlyPacks, by: option)
+		weeklyPacks = sortedPacks(packs: weeklyPacks, by: option)
+		configureSections()
+	}
+	
+	func filterPacks(_ searchText: String, in scope: String) {
+		var searchPacks = [Pack]()
+		switch scope {
+		case "Yıllık":
+			searchPacks = packs.filter{ $0.subscriptionType == .yearly }
+		case "Aylık":
+			searchPacks = packs.filter{ $0.subscriptionType == .monthly }
+		case "Haftalık":
+			searchPacks = packs.filter{ $0.subscriptionType == .weekly }
+		default:
+			searchPacks = packs
+		}
+		filteredPacks = searchPacks.filter{ $0.name.range(of: searchText, options: [.diacriticInsensitive, .caseInsensitive]) != nil }
+		delegate?.viewModelDidUpdate(viewModel: self)
+	}
+}
+
+
+//MARK: - Private
+fileprivate extension PacksViewModel {
+	
+	func sortedPacks(packs: [Pack], by option: PackSortOption = .talk) ->[Pack] {
 		let sortedPacks = packs.sorted { (lhs, rhs) -> Bool in
 			switch option {
 			case .talk:
@@ -171,11 +193,14 @@ class PacksViewModel: NSObject {
 		return sortedPacks
 	}
 	
-	func sortAllPacks(by option: PackSortOption = .talk) {
-		self.favoritePacks = self.sortedPacks(packs: self.favoritePacks, by: option)
-		self.yearlyPacks = self.sortedPacks(packs: self.yearlyPacks, by: option)
-		self.monthlyPacks = self.sortedPacks(packs: self.monthlyPacks, by: option)
-		self.weeklyPacks = self.sortedPacks(packs: self.weeklyPacks, by: option)
+	func configureSections() {
+		sectionHeaders.removeAll()
+		if favoritePacks.count > 0 { sectionHeaders.append("Favoriler") }
+		if yearlyPacks.count > 0 { sectionHeaders.append("Yıllık") }
+		if monthlyPacks.count > 0 { sectionHeaders.append("Aylık") }
+		if weeklyPacks.count > 0 { sectionHeaders.append("Haftalık") }
+		numberOfSections = sectionHeaders.count
+		delegate?.viewModelDidUpdate(viewModel: self)
 	}
 }
 
